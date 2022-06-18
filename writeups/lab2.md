@@ -12,7 +12,8 @@ I would like to thank/reward these classmates for their help: [list sunetids her
 This lab took me about [n] hours to do. I [did/did not] attend the lab session.
 
 Program Structure and Design of the TCPReceiver and wrap/unwrap routines:
-[]
+
+- 
 
 Implementation Challenges:
 []
