@@ -9,6 +9,38 @@
 #include <functional>
 #include <queue>
 
+class Timer {
+  private:
+    unsigned int init_rtx_timeout_;
+    unsigned int cur_rtx_timeout_;
+    unsigned int time_expired_;
+    bool stop_;
+
+  public:
+    Timer(unsigned int init_rtx_timeout)
+        : init_rtx_timeout_(init_rtx_timeout), cur_rtx_timeout_(init_rtx_timeout), time_expired_(0), stop_(true) {}
+
+    void Start() {
+        stop_ = false;
+    }
+
+    void Reset() { time_expired_ = 0; }
+
+    void ResetTimeout() { cur_rtx_timeout_ = init_rtx_timeout_; }
+
+    void Close() { stop_ = true; }
+
+    bool Closed() { return stop_; }
+
+    void DoubleRtxTimeout() {
+        cur_rtx_timeout_ <<= 1;
+    }
+
+    bool Expired() { return time_expired_ >= cur_rtx_timeout_; }
+
+    void ExpireTime(unsigned int t) { time_expired_ += t; }
+};
+
 //! \brief The "sender" part of a TCP implementation.
 
 //! Accepts a ByteStream, divides it up into segments and sends the
@@ -31,6 +63,43 @@ class TCPSender {
 
     //! the (absolute) sequence number for the next byte to be sent
     uint64_t _next_seqno{0};
+
+    // 控制超时重传的时钟
+    Timer timer_;
+
+    // 还未被ack的下一个绝对序列号
+    uint64_t left_abs_seq_{0};
+
+    // 可以发送的最大绝对系列号的后一个，和left_abs_seq_组成左闭右开的区间
+    // 初始化为1保证第一次发送一个SYN
+    uint64_t right_abs_seq_{1};
+
+    // 用于32位序列号和64位绝对序列号之间的转换
+    uint64_t checkpoint_{0};
+
+    // 是否已经发送过FIN，这是需要记录是因为根据其他的状态无法推断出这个内容
+    bool fin_send_{false};
+
+    // 连续重传次数
+    unsigned int num_consecutive_retx_{0};
+    
+    // 上次收到的window size
+    uint16_t last_receive_window_size_{1};
+
+    // 还没有被ACK的segment
+    std::queue<TCPSegment> segment_no_ack_{};
+    
+    // 还没有被ack的byte数
+    uint64_t bytes_in_flight_{0};
+
+  private:
+    void removeQueue(uint64_t abs_ack);
+
+    void update(uint64_t abs_ack, uint16_t window_size);
+  
+    void sendSegment(const TCPSegment& seg, bool reset_timer);
+    
+    void resetTimer();
 
   public:
     //! Initialize a TCPSender
