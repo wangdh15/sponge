@@ -20,9 +20,7 @@ class Timer {
     Timer(unsigned int init_rtx_timeout)
         : init_rtx_timeout_(init_rtx_timeout), cur_rtx_timeout_(init_rtx_timeout), time_expired_(0), stop_(true) {}
 
-    void Start() {
-        stop_ = false;
-    }
+    void Start() { stop_ = false; }
 
     void Reset() { time_expired_ = 0; }
 
@@ -32,9 +30,7 @@ class Timer {
 
     bool Closed() { return stop_; }
 
-    void DoubleRtxTimeout() {
-        cur_rtx_timeout_ <<= 1;
-    }
+    void DoubleRtxTimeout() { cur_rtx_timeout_ <<= 1; }
 
     bool Expired() { return time_expired_ >= cur_rtx_timeout_; }
 
@@ -78,13 +74,13 @@ class TCPSender {
 
     // 连续重传次数
     unsigned int num_consecutive_retx_{0};
-    
+
     // 上次收到的window size
     uint16_t last_receive_window_size_{1};
 
     // 还没有被ACK的segment
     std::queue<TCPSegment> segment_no_ack_{};
-    
+
     // 还没有被ack的byte数
     uint64_t bytes_in_flight_{0};
 
@@ -92,9 +88,9 @@ class TCPSender {
     void removeQueue(uint64_t abs_ack);
 
     void update(uint64_t abs_ack, uint16_t window_size);
-  
-    void sendSegment(const TCPSegment& seg, bool reset_timer);
-    
+
+    void sendSegment(const TCPSegment &seg, bool reset_timer);
+
     void resetTimer();
 
   public:
