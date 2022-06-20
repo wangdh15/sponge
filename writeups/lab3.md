@@ -17,9 +17,9 @@ Program Structure and Design of the TCPSender:
 
 ### fill_window
 
-1. 判断windows的大小，然后将min(TCPConfig::MAX_PAYLOAD_SIZE, windows)的字节添加到包中，并加入发送队列中。
-2. SYN和FIN也要占据一个序列号。
-3. 当windows的大小为0时，需要按照大小为1进行处理。这是因为虽然可能遭到拒绝，但是可以触发发送方再发送一次ACK。
+1. SYN和FIN要占据绝对序号的空间，也会占据windows的空间。
+2. MAX_PAYLOAD_SIZE指的是data的最大大小。SYN和ACK不算data的大小中。
+3. 当windows的大小为0时，且当前发送队列没有包的时候，需要按照大小为1进行处理。这是因为虽然可能遭到拒绝，但是可以触发发送方再发送一次ACK。
 
 ### ack_received
 
@@ -34,7 +34,7 @@ Program Structure and Design of the TCPSender:
 触发了超时。
 1. 如果超时了，则需要对包进行重发，并将修改下次超时时间。
 2. 如果没有超时，则不做什么处理。
-
+3. 如果是window_size为0的情况下发送的一个包，那么如果发生了超时，则不用延长对应的过期时间，保持原样即可。
 
 ### send_empty_segment
 

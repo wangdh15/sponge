@@ -68,11 +68,7 @@ class TCPSender {
     Timer timer_;
 
     // 还未被ack的下一个绝对序列号
-    uint64_t left_abs_seq_{0};
-
-    // 可以发送的最大绝对系列号的后一个，和left_abs_seq_组成左闭右开的区间
-    // 初始化为1保证第一次发送一个SYN
-    uint64_t right_abs_seq_{1};
+    uint64_t last_ack_{0};
 
     // 用于32位序列号和64位绝对序列号之间的转换
     uint64_t checkpoint_{0};

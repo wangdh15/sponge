@@ -4,6 +4,7 @@
 #include "tcp_segment.hh"
 #include "wrapping_integers.hh"
 
+#include <assert.h>
 #include <random>
 
 // Dummy implementation of a TCP sender
@@ -28,7 +29,20 @@ TCPSender::TCPSender(const size_t capacity, const uint16_t retx_timeout, const s
 uint64_t TCPSender::bytes_in_flight() const { return bytes_in_flight_; }
 
 void TCPSender::fill_window() {
-    while (!fin_send_ && _next_seqno < right_abs_seq_) {
+    uint64_t right_abs_seq = last_ack_ + last_receive_window_size_;
+    if (segment_no_ack_.empty() && last_receive_window_size_ == 0) {
+        // 如果所有的包都被ack了，且对面说window_size为零，则这个时候需要将
+        // window_size调整为1，这是因为需要保证自己这边发包来触发对面更新自己的window_size
+        // 不然的话，整个协议就hang住了。
+        // 也就是说要保证要不现在还有没有ack的包，要不要保证现在还有空间让我发包。
+        // 如果所有的包都被ack了，且没有空间让我发包了，那么sender就没法想receiver发包，
+        // 那么他也就没法收到对面的ack，没法更新window_size，之后就再也没法发包了。
+        // 这里需要判断segment_no_ack_为空是为了判断是否之前已经发了一个大小为1的包，
+        // 如果已经发过了的话，就不用再发了
+        assert(right_abs_seq == _next_seqno);
+        right_abs_seq += 1;
+    }
+    while (!fin_send_ && _next_seqno < right_abs_seq) {
         TCPSegment seg;
         auto &header = seg.header();
         auto &payload = seg.payload();
@@ -36,19 +50,13 @@ void TCPSender::fill_window() {
         if (_next_seqno == 0) {
             header.syn = true;
         }
-        uint64_t max_data_len = min(TCPConfig::MAX_PAYLOAD_SIZE, right_abs_seq_ - _next_seqno);
-        // 如果上次收到的说window的大小为0的话，则至少要发送一个数据
-        if (last_receive_window_size_ == 0) {
-            max_data_len = max(max_data_len, static_cast<uint64_t>(1));
-        }
-        if (header.syn)
-            max_data_len -= 1;
+        uint64_t max_data_len = min(TCPConfig::MAX_PAYLOAD_SIZE, right_abs_seq - _next_seqno - (header.syn ? 1 : 0));
         std::string data = _stream.read(max_data_len);
         payload = Buffer(std::move(data));
         _next_seqno += seg.length_in_sequence_space();
         // check whether send FIN
         // 如果Payload装满了，但是没有达到window，那么还是可以发送FIN
-        if (_stream.eof() && _next_seqno < right_abs_seq_) {
+        if (_stream.eof() && _next_seqno < right_abs_seq) {
             header.fin = true;
             fin_send_ = true;
             _next_seqno += 1;
@@ -69,9 +77,11 @@ void TCPSender::fill_window() {
 void TCPSender::ack_received(const WrappingInt32 ackno, const uint16_t window_size) {
     // 先根据ackno清空发送队列
     uint64_t abs_seq = unwrap(ackno, _isn, checkpoint_);
+    // 确认序列号查过了下一个要发送的，非法
     if (abs_seq > _next_seqno) {
         return;
     }
+    // 根据ack将发送队列中已经被确认的包去除
     removeQueue(abs_seq);
     update(abs_seq, window_size);
     fill_window();
@@ -118,33 +128,29 @@ void TCPSender::sendSegment(const TCPSegment &seg, bool reset_timer) {
 
 void TCPSender::removeQueue(uint64_t abs_ack) {
     while (!segment_no_ack_.empty()) {
-        auto &t = segment_no_ack_.front().header().seqno;
-        uint64_t abs_t_seqno = unwrap(t, _isn, checkpoint_);
-        if (abs_t_seqno < abs_ack) {
+        auto &t = segment_no_ack_.front();
+        uint64_t abs_t_seqno = unwrap(t.header().seqno, _isn, checkpoint_) + t.length_in_sequence_space();
+        if (abs_t_seqno <= abs_ack) {
             checkpoint_ = abs_t_seqno;
             bytes_in_flight_ -= segment_no_ack_.front().length_in_sequence_space();
             segment_no_ack_.pop();
+            // 如果有新的包被ack了，则需要重置定时器
+            resetTimer();
         } else {
             break;
         }
     }
+    // 如果所有的包都被ACK了，则需要关闭定时器
+    if (segment_no_ack_.empty()) {
+        timer_.Close();
+    }
 }
 
 void TCPSender::update(uint64_t abs_ack, uint16_t window_size) {
-    if (abs_ack > left_abs_seq_) {
+    if (abs_ack > last_ack_) {
         last_receive_window_size_ = window_size;
-        left_abs_seq_ = abs_ack;
-        // 当收到window_size 为零的时候，需要按照1进行处理
-        right_abs_seq_ = abs_ack + window_size;
-        // reset the timer
-        resetTimer();
-    } else if (abs_ack == left_abs_seq_) {
+        last_ack_ = abs_ack;
+    } else if (abs_ack == last_ack_) {
         last_receive_window_size_ = max(last_receive_window_size_, window_size);
-        right_abs_seq_ = max(right_abs_seq_, abs_ack + last_receive_window_size_);
-    }
-
-    // 如果发出的所有的seg都被ack了，则需要停止定时器
-    if (segment_no_ack_.empty()) {
-        timer_.Close();
     }
 }
