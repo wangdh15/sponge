@@ -1,0 +1,10 @@
+#ifndef SPONGE_LIBSPONGE_UTIL_LOG_HH
+#define SPONGE_LIBSPONGE_UTIL_LOG_HH
+
+#include <cstdio>
+
+
+
+
+
+#endif // ! SPONGE_LIBSPONGE_UTIL_LOG_HH

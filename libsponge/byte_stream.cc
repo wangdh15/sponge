@@ -68,3 +68,5 @@ size_t ByteStream::bytes_written() const { return bytes_written_; }
 size_t ByteStream::bytes_read() const { return bytes_read_; }
 
 size_t ByteStream::remaining_capacity() const { return capacity_ - data_.size(); }
+
+bool ByteStream::canWrite() const { return !(end_ || _error); }

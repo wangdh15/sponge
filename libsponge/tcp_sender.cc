@@ -109,7 +109,7 @@ void TCPSender::send_empty_segment() {
     TCPSegment seg;
     seg.header().seqno = wrap(_next_seqno, _isn);
     _segments_out.push(seg);
-    sendSegment(seg, true);
+    //sendSegment(seg, true);
 }
 
 void TCPSender::resetTimer() {

@@ -6,6 +6,9 @@
 #include "tcp_sender.hh"
 #include "tcp_state.hh"
 
+#include <cassert>
+#include <iostream>
+
 //! \brief A complete endpoint of a TCP connection
 class TCPConnection {
   private:
@@ -20,6 +23,8 @@ class TCPConnection {
     //! for 10 * _cfg.rt_timeout milliseconds after both streams have ended,
     //! in case the remote TCPConnection doesn't know we've received its whole stream?
     bool _linger_after_streams_finish{true};
+
+    bool receive_rst_{false};
 
   public:
     //! \name "Input" interface for the writer
@@ -79,6 +84,37 @@ class TCPConnection {
     //! after both streams have finished (e.g. to ACK retransmissions from the peer)
     bool active() const;
     //!@}
+
+    void sendAllData(bool rst = false) {
+        auto &sender_segmants_out = _sender.segments_out();
+        // size_t data_num = sender_segmants_out.size();
+        while (!sender_segmants_out.empty()) {
+            auto package = sender_segmants_out.front();
+            sender_segmants_out.pop();
+            package.header().ack = true;
+            auto ack = _receiver.ackno();
+            if (ack.has_value()) {
+                package.header().ack = true;
+                package.header().ackno = ack.value();
+                size_t window_size = _receiver.window_size();
+                if (window_size > std::numeric_limits<uint16_t>::max()) {
+                    window_size = std::numeric_limits<uint16_t>::max();
+                }
+                package.header().win = window_size;
+            } else {
+                package.header().ack = false;
+            }
+            if (rst) {
+                package.header().rst = true;
+            }
+            _segments_out.push(package);
+        }
+#ifdef DEBUG
+        if (data_num != 0) {
+            std::cout << "Send " << data_num << " Package!" << std::endl;
+        }
+#endif
+    }
 
     //! Construct a new connection from a configuration
     explicit TCPConnection(const TCPConfig &cfg) : _cfg{cfg} {}
