@@ -35,7 +35,7 @@ void TCPConnection::segment_received(const TCPSegment &seg) {
         _receiver.stream_out().set_error();
         return;
     }
-
+    
     _receiver.segment_received(seg);
     // 当发现将对面的FIN接收了，且还没有发送FIN，则表示自己是passive_close
     // 如果接收了FIN之后接收到了重复的包，则这个地方不会有问题。
@@ -104,8 +104,9 @@ void TCPConnection::tick(const size_t ms_since_last_tick) {
       return;
     _sender.tick(ms_since_last_tick);
     if (_sender.consecutive_retransmissions() > TCPConfig::MAX_RETX_ATTEMPTS) {
-        _sender.stream_in().end_input();
-        _receiver.stream_out().end_input();
+        _sender.stream_in().set_error();
+        if (!_receiver.stream_out().input_ended()) 
+            _receiver.stream_out().set_error();
         receive_rst_ = true;
         sendAllData(true, true);
     } else {
