@@ -68,8 +68,11 @@ class TCPReceiver {
 
     bool legal_seqno(WrappingInt32 seqno) const {
       size_t abs_ackno = get_abs_ackno().value();
-      size_t cur_abs_acnko = unwrap(seqno, syn_num_, checkpoints_);
-      return cur_abs_acnko >= abs_ackno && cur_abs_acnko < abs_ackno + window_size();
+      size_t cur_abs_acnko = unwrap(seqno, syn_num_, _reassembler.get_ackno());
+      // 可以等于abs_ackno+window_size()，这是以为当他发送完所有的数据的时候，
+      // 可能我还没有处理，但是他需要能够对我发过去的包进行ACK，极端情况就是，
+      // 我ACK他所有的包，那么他的序号就会编程abs_ackno + window_size。
+      return cur_abs_acnko >= abs_ackno && cur_abs_acnko <= abs_ackno + window_size();
   }
 
 private:
