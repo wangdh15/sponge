@@ -4,8 +4,8 @@
 #include "byte_stream.hh"
 
 #include <cstdint>
-#include <string>
 #include <map>
+#include <string>
 
 //! \brief A class that assembles a series of excerpts from a byte stream (possibly out of order,
 //! possibly overlapping) into an in-order byte stream.
@@ -16,12 +16,11 @@ class StreamReassembler {
     ByteStream _output;  //!< The reassembled in-order byte stream
     size_t _capacity;    //!< The maximum number of bytes
 
-
     std::map<std::pair<size_t, size_t>, std::string> all_data_;  // 维护所有还没有组装的区间
-    size_t range_begin_;  // 缺失的第一个字节的序号
-    size_t unassembled_bytes_; // 在all_data_中还没有发送给_output的长度
-    bool receive_eof_;   // 是否曾经接收到过eof
-    size_t eof_index_;  // 接收到的eof的index。
+    size_t range_begin_;                                         // 缺失的第一个字节的序号
+    size_t unassembled_bytes_;                                   // 在all_data_中还没有发送给_output的长度
+    bool receive_eof_;                                           // 是否曾经接收到过eof
+    size_t eof_index_;                                           // 接收到的eof的index。
 
   public:
     //! \brief Construct a `StreamReassembler` that will store up to `capacity` bytes.
@@ -55,16 +54,10 @@ class StreamReassembler {
     //! \returns `true` if no substrings are waiting to be assembled
     bool empty() const;
 
-    size_t get_ackno() const {
-      return range_begin_;
-    }
+    size_t get_ackno() const { return range_begin_; }
 
-    size_t get_window_size() const {
-      return _capacity - _output.buffer_size();
-  }
-    bool input_ended() const {
-    return _output.input_ended();
-  }
+    size_t get_window_size() const { return _capacity - _output.buffer_size(); }
+    bool input_ended() const { return _output.input_ended(); }
 };
 
 #endif  // SPONGE_LIBSPONGE_STREAM_REASSEMBLER_HH

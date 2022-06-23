@@ -17,7 +17,6 @@ void TCPReceiver::segment_received(const TCPSegment &seg) {
         else {
             receive_syn_ = true;
             syn_num_ = seg.header().seqno;
-            checkpoints_ = 0;
         }
     }
 
@@ -25,21 +24,26 @@ void TCPReceiver::segment_received(const TCPSegment &seg) {
     // if this is not a sync package, the absoluted seqno of data need minus 1.
     if (!seg.header().syn)
         seq = seq - 1;
-    uint64_t abs_seqno = unwrap(seq, syn_num_, checkpoints_);
+    uint64_t abs_seqno = unwrap(seq, syn_num_, _reassembler.get_ackno());
     _reassembler.push_substring(seg.payload().copy(), abs_seqno, seg.header().fin);
-    checkpoints_ = abs_seqno;
 }
 
-optional<WrappingInt32> TCPReceiver::ackno() const {
-    if (!receive_syn_)
-        return {};
-    size_t abs_ackno = _reassembler.get_ackno();
-    // the syn need a seq_num
+std::optional<size_t> TCPReceiver::get_abs_ackno() const {
+  if (!receive_syn_) return {};
+  size_t abs_ackno = _reassembler.get_ackno();
+  // the SYN 
+  abs_ackno += 1;
+  if (_reassembler.input_ended()) 
     abs_ackno += 1;
-    // because the fin need a seq_num;
-    if (_reassembler.input_ended())
-        abs_ackno += 1;
-    return wrap(abs_ackno, syn_num_);
+  return abs_ackno;
 }
+
+
+optional<WrappingInt32> TCPReceiver::ackno() const {
+    auto abs_ackno = get_abs_ackno();
+    if (!abs_ackno.has_value()) return {};
+    return wrap(abs_ackno.value(), syn_num_);
+}
+
 
 size_t TCPReceiver::window_size() const { return _reassembler.get_window_size(); }

@@ -27,6 +27,17 @@ TCP一共有两个方向，一个是发送，一个是接收。一方可以安�
 如果自己收到了对面发来的
 
 
+---
+
+每个endpoint有两种可能的情况：
+1. A先发FIN，然后收到了B的FIN。
+  - 如果是这种情况，则当A收到了自己FIN的ACK，并给B的FIN发送了ACK之后，A不能够确保B收到了自己发送的ACK。因为如果B不会对A给B的FIN返回的ACK在发送一次ACK。
+
+
+2. A先收到B的FIN，然后A发送了自己的FIN。
+
+
+
 Program Structure and Design of the TCPConnection:
 
 每个TCPConnection的公共接口有如下:

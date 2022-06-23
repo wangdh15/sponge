@@ -65,6 +65,15 @@ class TCPReceiver {
     ByteStream &stream_out() { return _reassembler.stream_out(); }
     const ByteStream &stream_out() const { return _reassembler.stream_out(); }
     //!@}
+
+    bool legal_seqno(WrappingInt32 seqno) const {
+      size_t abs_ackno = get_abs_ackno().value();
+      size_t cur_abs_acnko = unwrap(seqno, syn_num_, checkpoints_);
+      return cur_abs_acnko >= abs_ackno && cur_abs_acnko < abs_ackno + window_size();
+  }
+
+private:
+  std::optional<size_t> get_abs_ackno() const;
 };
 
 #endif  // SPONGE_LIBSPONGE_TCP_RECEIVER_HH

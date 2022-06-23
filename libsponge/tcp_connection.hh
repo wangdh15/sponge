@@ -26,6 +26,12 @@ class TCPConnection {
 
     bool receive_rst_{false};
 
+    bool send_fin_{false};
+
+    bool activa_close_{true};
+
+    size_t time_since_last_segment_received_{0};
+
   public:
     //! \name "Input" interface for the writer
     //!@{
@@ -85,13 +91,18 @@ class TCPConnection {
     bool active() const;
     //!@}
 
-    void sendAllData(bool rst = false) {
+    // 将sender想发送的包添加上对应的ack和win(如果有的话, 除了第一个SYN包之后，其他的应该都有)
+    // 之后发送给网络层。
+    void sendAllData(bool rst = false, bool must = false) {
         auto &sender_segmants_out = _sender.segments_out();
-        // size_t data_num = sender_segmants_out.size();
+        // 如果至少要发送一个数据包，但是当前发送队列又是空的，
+        // 则发送一个空的包
+        if (must && sender_segmants_out.empty()) {
+            _sender.send_empty_segment();
+        }
         while (!sender_segmants_out.empty()) {
             auto package = sender_segmants_out.front();
             sender_segmants_out.pop();
-            package.header().ack = true;
             auto ack = _receiver.ackno();
             if (ack.has_value()) {
                 package.header().ack = true;
@@ -107,13 +118,12 @@ class TCPConnection {
             if (rst) {
                 package.header().rst = true;
             }
+            if (package.header().fin) {
+                send_fin_ = true;
+            }
             _segments_out.push(package);
         }
-#ifdef DEBUG
-        if (data_num != 0) {
-            std::cout << "Send " << data_num << " Package!" << std::endl;
-        }
-#endif
+        
     }
 
     //! Construct a new connection from a configuration
