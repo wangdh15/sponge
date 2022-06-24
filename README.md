@@ -1,3 +1,23 @@
+- [x] lab 0: networkikng warmup
+- [x] lab 1: stitching substring into a byte stream
+- [x] lab 2: the TCP receiver
+- [x] lab 3: the TCP sender
+- [x] lab 4: the TCP connection
+- [x] lab 5: the networking interface
+- [x] lab 6: the IP router
+- [x] lab 7: putting it all together
+
+完成CS144的全部lab，并通过所有测试。
+
+1. 实现了TCP协议，并成功与外界主机进行通信。
+2. 实现ARP协议。
+3. 实现简单的路由器。
+4. 实现了通外界的可靠通信。
+
+
+![](./imgs/big-picture.png)
+
+
 For build prereqs, see [the CS144 VM setup instructions](https://web.stanford.edu/class/cs144/vm_howto).
 
 ## Sponge quickstart

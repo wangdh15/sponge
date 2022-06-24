@@ -13,7 +13,9 @@ I would like to thank/reward these classmates for their help: [list sunetids her
 
 This lab took me about [n] hours to do. I [did/did not] attend the lab session.
 
-Solo portion:
+成功通过全部测试！
+
+Solo portion
 []
 
 Group portion:
