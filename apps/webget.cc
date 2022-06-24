@@ -19,8 +19,9 @@ void get_URL(const string &host, const string &path) {
     // the "eof" (end of file).
 
     Address addr(host, "http");
-    //TCPSocket socket;
-    CS144TCPSocket socket;
+    // TCPSocket socket;
+    // CS144TCPSocket socket;
+    FullStackSocket socket;
     socket.connect(addr);
     std::string http_request;
     std::string eol = "\r\n";
