@@ -7,6 +7,7 @@
 
 #include <optional>
 #include <queue>
+#include <unordered_map>
 
 //! \brief A "network interface" that connects IP (the internet layer, or network layer)
 //! with Ethernet (the network access layer, or link layer).
@@ -29,6 +30,17 @@
 //! the network interface passes it up the stack. If it's an ARP
 //! request or reply, the network interface processes the frame
 //! and learns or replies as necessary.
+class CacheEntry {
+public:
+  static constexpr int32_t  TIMEOUT_RESEND = 5'000;  // retry time.
+  static constexpr int32_t  EXPIRE_TIME = 30'000;  // 过期时间30s
+  static constexpr uint64_t  INVALID_LAST_SEND_TIME = 2'000'000;
+  uint64_t time_since_last_send_{INVALID_LAST_SEND_TIME};
+  bool valid_{false};
+
+  EthernetAddress mac_address_{};
+};
+
 class NetworkInterface {
   private:
     //! Ethernet (known as hardware, network-access-layer, or link-layer) address of the interface
@@ -39,6 +51,12 @@ class NetworkInterface {
 
     //! outbound queue of Ethernet frames that the NetworkInterface wants sent
     std::queue<EthernetFrame> _frames_out{};
+
+    //! store the map from ip to mac
+    std::unordered_map<uint32_t, CacheEntry> cache_{};
+
+    //! store then pending datagram
+    std::unordered_map<uint32_t, std::vector<EthernetFrame>> pending_data_{};
 
   public:
     //! \brief Construct a network interface with given Ethernet (network-access-layer) and IP (internet-layer) addresses
@@ -62,6 +80,12 @@ class NetworkInterface {
 
     //! \brief Called periodically when time elapses
     void tick(const size_t ms_since_last_tick);
+    
+    //! \brief send arp request to des_ip
+    void send_arp_request(uint32_t des_ip);
+  
+    //! \brief send arp reply
+    void send_arp_reply(uint32_t dst_ip, EthernetAddress des_mac_address);
 };
 
 #endif  // SPONGE_LIBSPONGE_NETWORK_INTERFACE_HH
