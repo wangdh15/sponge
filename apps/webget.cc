@@ -1,3 +1,4 @@
+#include "tcp_sponge_socket.hh"
 #include "socket.hh"
 #include "util.hh"
 
@@ -18,7 +19,8 @@ void get_URL(const string &host, const string &path) {
     // the "eof" (end of file).
 
     Address addr(host, "http");
-    TCPSocket socket;
+    //TCPSocket socket;
+    CS144TCPSocket socket;
     socket.connect(addr);
     std::string http_request;
     std::string eol = "\r\n";
@@ -31,7 +33,8 @@ void get_URL(const string &host, const string &path) {
         string data = socket.read(1024);
         std::cout << data;
     }
-    socket.close();
+    socket.wait_until_closed();
+    //socket.close();
     // cerr << "Function called: get_URL(" << host << ", " << path << ").\n";
     // cerr << "Warning: get_URL() has not been implemented yet.\n";
 }
